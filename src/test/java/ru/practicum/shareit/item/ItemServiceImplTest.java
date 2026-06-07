@@ -104,7 +104,7 @@ class ItemServiceImplTest {
                 .email("other@mail.ru")
                 .build());
 
-        assertThrows(NoSuchElementException.class,
+        assertThrows(ResponseStatusException.class,
                 () -> itemService.update(user.getId(), 999L, ItemDto.builder().name("New").build()));
     }
 
@@ -121,8 +121,7 @@ class ItemServiceImplTest {
                 .available(true)
                 .build());
 
-        ItemDto result = itemService.getById(owner.getId(), item.getId());
-
+        ItemDto result = itemService.getById(item.getId());
         assertEquals(item.getId(), result.getId());
         assertEquals("Дрель", result.getName());
     }

@@ -1,6 +1,7 @@
 package ru.practicum.shareit.item;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -11,46 +12,52 @@ import ru.practicum.shareit.user.model.User;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
 
-    @Override
-    public ItemDto create(Long userId, ItemDto itemDto) {
-        User owner = userRepository.findById(userId)
+    private User getUserById(Long userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Пользователь с id=" + userId + " не найден"));
+    }
 
-        Item item = new Item();
-        item.setName(itemDto.getName());
-        item.setDescription(itemDto.getDescription());
-        item.setAvailable(itemDto.getAvailable());
-        item.setOwner(owner);
+    private Item getItemById(Long itemId) {
+        return itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Вещь с id=" + itemId + " не найдена"));
+    }
 
+    @Override
+    public ItemDto create(Long userId, ItemDto itemDto) {
+        log.info("Получен запрос на создание вещи {} от пользователя {}", itemDto, userId);
+        User owner = getUserById(userId);
+        Item item = ItemMapper.toItem(itemDto, owner);
         Item savedItem = itemRepository.save(item);
         return ItemMapper.toItemDto(savedItem);
     }
 
     @Override
     public ItemDto update(Long userId, Long itemId, ItemDto itemDto) {
-        Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new NoSuchElementException("Вещь с id=" + itemId + " не найдена"));
+        log.info("Получен запрос на обновление вещи {} c id = {} от пользователя {}", itemDto, itemId, userId);
+        Item item = getItemById(itemId);
 
         if (!item.getOwner().getId().equals(userId)) {
+            log.error("Пользователь с id={} не является владельцем вещи", userId);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Пользователь с id=" + userId + " не является владельцем вещи");
         }
 
-        if (itemDto.getName() != null) {
+        if (itemDto.getName() != null && !itemDto.getName().isBlank()) {
             item.setName(itemDto.getName());
         }
 
-        if (itemDto.getDescription() != null) {
+        if (itemDto.getDescription() != null && !itemDto.getDescription().isBlank()) {
             item.setDescription(itemDto.getDescription());
         }
 
@@ -63,15 +70,15 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public ItemDto getById(Long userId, Long itemId) {
-        Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new NoSuchElementException("Вещь с id=" + itemId + " не найдена"));
-
-        return ItemMapper.toItemDto(item);
+    public ItemDto getById(Long itemId) {
+        log.info("Получен запрос на отображение вещи c id = {}", itemId);
+        return ItemMapper.toItemDto(getItemById(itemId));
     }
 
     @Override
     public Collection<ItemDto> getOwnerItems(Long userId) {
+        log.info("Получен запрос на отображение вещей пользователя c id = {}", userId);
+        getUserById(userId);
         return itemRepository.findAll()
                 .stream()
                 .filter(item -> item.getOwner() != null)
@@ -82,22 +89,15 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public Collection<ItemDto> search(Long userId, String text) {
+        log.info("Получен запрос на поиск вещей пользователя c id = {} с текстом {}", userId, text);
         if (text == null || text.isBlank()) {
+            log.warn("Строка поиска пуста = {}", text);
             return List.of();
         }
 
-        String query = text.toLowerCase();
-
-        return itemRepository.findAll()
+        return itemRepository.search(text)
                 .stream()
-                .filter(item -> Boolean.TRUE.equals(item.getAvailable()))
-                .filter(item -> containsIgnoreCase(item.getName(), query)
-                        || containsIgnoreCase(item.getDescription(), query))
                 .map(ItemMapper::toItemDto)
                 .toList();
-    }
-
-    private boolean containsIgnoreCase(String source, String query) {
-        return source != null && source.toLowerCase().contains(query);
     }
 }
