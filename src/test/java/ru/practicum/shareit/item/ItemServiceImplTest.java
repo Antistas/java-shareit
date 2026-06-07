@@ -5,10 +5,7 @@ import org.springframework.web.server.ResponseStatusException;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.model.User;
-
 import java.util.Collection;
-import java.util.NoSuchElementException;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class ItemServiceImplTest {
