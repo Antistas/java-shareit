@@ -5,11 +5,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import ru.practicum.shareit.booking.BookingRepository;
+import ru.practicum.shareit.booking.model.BookingStatus;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.model.User;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -20,6 +25,8 @@ public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
+    private final CommentRepository commentRepository;
 
     private User getUserById(Long userId) {
         return userRepository.findById(userId)
@@ -70,19 +77,23 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public ItemDto getById(Long itemId) {
+    public ItemDto getById(Long userId, Long itemId) {
         log.info("Получен запрос на отображение вещи c id = {}", itemId);
-        return ItemMapper.toItemDto(getItemById(itemId));
+
+        Item item = getItemById(itemId);
+
+        ItemDto itemDto = ItemMapper.toItemDto(item);
+        itemDto.setComments(getComments(itemId));
+
+        return itemDto;
     }
 
     @Override
     public Collection<ItemDto> getOwnerItems(Long userId) {
         log.info("Получен запрос на отображение вещей пользователя c id = {}", userId);
         getUserById(userId);
-        return itemRepository.findAll()
+        return itemRepository.findByOwner_Id(userId)
                 .stream()
-                .filter(item -> item.getOwner() != null)
-                .filter(item -> item.getOwner().getId().equals(userId))
                 .map(ItemMapper::toItemDto)
                 .toList();
     }
@@ -98,6 +109,52 @@ public class ItemServiceImpl implements ItemService {
         return itemRepository.search(text)
                 .stream()
                 .map(ItemMapper::toItemDto)
+                .toList();
+    }
+
+    @Override
+    public CommentDto addComment(Long userId, Long itemId, CommentDto commentDto) {
+        User author = getUserById(userId);
+        Item item = getItemById(itemId);
+
+        boolean hasPastBooking = bookingRepository
+                .existsByItem_IdAndBooker_IdAndStatusAndEndBefore(
+                        itemId,
+                        userId,
+                        BookingStatus.APPROVED,
+                        LocalDateTime.now()
+                );
+
+        if (!hasPastBooking) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Пользователь не арендовал эту вещь");
+        }
+
+        Comment comment = Comment.builder()
+                .text(commentDto.getText())
+                .item(item)
+                .author(author)
+                .created(LocalDateTime.now())
+                .build();
+
+        Comment saved = commentRepository.save(comment);
+
+        return CommentDto.builder()
+                .id(saved.getId())
+                .text(saved.getText())
+                .authorName(saved.getAuthor().getName())
+                .created(saved.getCreated())
+                .build();
+    }
+
+    private List<CommentDto> getComments(Long itemId) {
+        return commentRepository.findByItem_Id(itemId)
+                .stream()
+                .map(comment -> CommentDto.builder()
+                        .id(comment.getId())
+                        .text(comment.getText())
+                        .authorName(comment.getAuthor().getName())
+                        .created(comment.getCreated())
+                        .build())
                 .toList();
     }
 }
