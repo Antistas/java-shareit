@@ -1,6 +1,7 @@
 package ru.practicum.shareit.request;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -9,11 +10,11 @@ import ru.practicum.shareit.request.dto.ItemRequestDto;
 import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.model.User;
-
 import java.util.Collection;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ItemRequestServiceImpl implements ItemRequestService {
 
     private final ItemRequestRepository itemRequestRepository;
@@ -21,6 +22,7 @@ public class ItemRequestServiceImpl implements ItemRequestService {
 
     @Override
     public ItemRequestDto create(Long userId, ItemRequestDto dto) {
+        log.info("Получен запрос на создание запроса вещи {} от пользователя {}", dto, userId);
         User user = getUser(userId);
         ItemRequest request = ItemRequestMapper.toItemRequest(dto, user);
         return ItemRequestMapper.toDto(itemRequestRepository.save(request));
@@ -28,6 +30,7 @@ public class ItemRequestServiceImpl implements ItemRequestService {
 
     @Override
     public Collection<ItemRequestDto> getOwnRequests(Long userId) {
+        log.info("Получен запрос на получение своих запросов пользователя {}", userId);
         getUser(userId);
 
         return itemRequestRepository.findByRequestor_IdOrderByCreatedDesc(userId)
@@ -38,10 +41,9 @@ public class ItemRequestServiceImpl implements ItemRequestService {
 
     @Override
     public Collection<ItemRequestDto> getAllRequests(Long userId, Integer from, Integer size) {
+        log.info("Получен запрос на получение всех запросов пользователя {} с {} в количестве {}", userId, from, size);
         getUser(userId);
-
         int page = from / size;
-
         return itemRequestRepository.findAll(PageRequest.of(page, size))
                 .stream()
                 .filter(request -> !request.getRequestor().getId().equals(userId))
@@ -51,8 +53,8 @@ public class ItemRequestServiceImpl implements ItemRequestService {
 
     @Override
     public ItemRequestDto getById(Long userId, Long requestId) {
+        log.info("Получен запрос на получение запроса пользователя {} с id = {}", userId, requestId);
         getUser(userId);
-
         ItemRequest request = itemRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Запрос не найден"));
 

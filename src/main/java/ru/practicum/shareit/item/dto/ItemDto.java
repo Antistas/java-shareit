@@ -27,8 +27,9 @@ public class ItemDto {
     @NotNull
     private Boolean available;
 
+    // последнее бронирование
     private LocalDateTime lastBooking;
-
+    // следующее бронирование
     private LocalDateTime nextBooking;
 
     private List<CommentDto> comments;

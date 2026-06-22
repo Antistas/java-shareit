@@ -1,6 +1,7 @@
 package ru.practicum.shareit.booking;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
@@ -29,6 +31,7 @@ public class BookingServiceImpl implements BookingService {
     // создаем бронирование
     @Override
     public BookingDto create(Long userId, BookingCreateDto dto) {
+        log.info("Получен запрос на создание бронирования {} от пользователя {}", dto, userId);
         User user = getUser(userId);
         Item item = getItem(dto.getItemId());
 
@@ -56,13 +59,14 @@ public class BookingServiceImpl implements BookingService {
     // владелец подтверждает или отклоняет бронирование
     @Override
     public BookingDto approve(Long userId, Long bookingId, Boolean approved) {
+        log.info("Получен запрос на подтверждение бронирования {} от пользователя {} со статусом {}",
+                bookingId, userId, approved);
 
-        getUser(userId);
         Booking booking = getBooking(bookingId);
-
         if (!booking.getItem().getOwner().getId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Подтвердить может только владелец");
         }
+        getUser(userId);
 
         booking.setStatus(Boolean.TRUE.equals(approved) ? BookingStatus.APPROVED : BookingStatus.REJECTED);
         return BookingMapper.toBookingDto(bookingRepository.save(booking));
@@ -71,6 +75,8 @@ public class BookingServiceImpl implements BookingService {
     // достаем информацию о бронировании
     @Override
     public BookingDto getById(Long userId, Long bookingId) {
+        log.info("Получен запрос на получение информации о бронирования {} от пользователя {}",
+                bookingId, userId);
         getUser(userId);
         Booking booking = getBooking(bookingId);
 
@@ -87,6 +93,8 @@ public class BookingServiceImpl implements BookingService {
     // получаем информацию о бронированиях пользователем
     @Override
     public Collection<BookingDto> getUserBookings(Long userId, BookingState state) {
+        log.info("Получен запрос на получение информации о бронированиях пользователя {} со статусом {}",
+                userId, state);
         getUser(userId);
 
         Sort sort = Sort.by(Sort.Direction.DESC, "start");
@@ -109,6 +117,8 @@ public class BookingServiceImpl implements BookingService {
     // получаем информацию о бронированиях (владелец)
     @Override
     public Collection<BookingDto> getOwnerBookings(Long userId, BookingState state) {
+        log.info("Получен запрос на получение информации о бронированиях у пользователя {} со статусом {}",
+                userId, state);
         getUser(userId);
         Sort sort = Sort.by(Sort.Direction.DESC, "start");
 
@@ -123,7 +133,6 @@ public class BookingServiceImpl implements BookingService {
                 .map(BookingMapper::toBookingDto)
                 .toList();
     }
-
 
     // хелперы
     private User getUser(Long userId) {

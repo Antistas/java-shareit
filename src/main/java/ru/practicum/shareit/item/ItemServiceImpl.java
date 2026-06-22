@@ -13,7 +13,6 @@ import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.model.User;
-
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -81,7 +80,6 @@ public class ItemServiceImpl implements ItemService {
         log.info("Получен запрос на отображение вещи c id = {}", itemId);
 
         Item item = getItemById(itemId);
-
         ItemDto itemDto = ItemMapper.toItemDto(item);
         itemDto.setComments(getComments(itemId));
 
@@ -114,9 +112,12 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public CommentDto addComment(Long userId, Long itemId, CommentDto commentDto) {
+        log.info("Получен запрос на добавление комментария к вещи {} пользователя c id = {} с текстом {}",
+                itemId, userId, commentDto);
         User author = getUserById(userId);
         Item item = getItemById(itemId);
 
+        // пользователь арендовал вещь ранее
         boolean hasPastBooking = bookingRepository
                 .existsByItem_IdAndBooker_IdAndStatusAndEndBefore(
                         itemId,
@@ -147,6 +148,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     private List<CommentDto> getComments(Long itemId) {
+        log.info("Получен запрос на вывод комментариев к вещи {}", itemId);
         return commentRepository.findByItem_Id(itemId)
                 .stream()
                 .map(comment -> CommentDto.builder()

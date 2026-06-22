@@ -1,103 +1,113 @@
 package ru.practicum.shareit.user;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import ru.practicum.shareit.user.dto.UserDto;
 import java.util.NoSuchElementException;
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
 class UserServiceImplTest {
 
-    private final UserRepository userRepository = new UserRepository();
-    private final UserService userService = new UserServiceImpl(userRepository);
+    @Autowired
+    private UserService userService;
 
     @Test
     void shouldCreateUser() {
+
         UserDto dto = UserDto.builder()
                 .name("Rustam")
-                .email("rustam@mail.ru")
+                .email("rustam_test@mail.ru")
                 .build();
 
         UserDto result = userService.create(dto);
-
         assertNotNull(result.getId());
         assertEquals("Rustam", result.getName());
-        assertEquals("rustam@mail.ru", result.getEmail());
+        assertEquals("rustam_test@mail.ru", result.getEmail());
+        userService.delete(result.getId());
     }
 
     @Test
     void shouldThrowExceptionWhenEmailAlreadyExists() {
-        userService.create(UserDto.builder()
+        UserDto result = userService.create(UserDto.builder()
                 .name("User 1")
-                .email("same@mail.ru")
+                .email("same_test@mail.ru")
                 .build());
 
         UserDto duplicate = UserDto.builder()
                 .name("User 2")
-                .email("same@mail.ru")
+                .email("same_test@mail.ru")
                 .build();
 
         assertThrows(IllegalArgumentException.class, () -> userService.create(duplicate));
+        userService.delete(result.getId());
     }
 
     @Test
     void shouldGetAllUsers() {
-        userService.create(UserDto.builder()
+        int currentSize = userService.getAll().size();
+
+        UserDto result1 = userService.create(UserDto.builder()
                 .name("User 1")
-                .email("user1@mail.ru")
+                .email("user1_test@mail.ru")
                 .build());
 
-        userService.create(UserDto.builder()
+        UserDto result2 = userService.create(UserDto.builder()
                 .name("User 2")
-                .email("user2@mail.ru")
+                .email("user2_test@mail.ru")
                 .build());
 
-        assertEquals(2, userService.getAll().size());
+        assertEquals(currentSize + 2, userService.getAll().size());
+        userService.delete(result1.getId());
+        userService.delete(result2.getId());
     }
 
     @Test
     void shouldUpdateUserNameAndEmail() {
         UserDto user = userService.create(UserDto.builder()
                 .name("Old")
-                .email("old@mail.ru")
+                .email("old_test@mail.ru")
                 .build());
 
         UserDto update = UserDto.builder()
                 .name("New")
-                .email("new@mail.ru")
+                .email("new_test@mail.ru")
                 .build();
 
         UserDto result = userService.update(user.getId(), update);
 
         assertEquals(user.getId(), result.getId());
         assertEquals("New", result.getName());
-        assertEquals("new@mail.ru", result.getEmail());
+        assertEquals("new_test@mail.ru", result.getEmail());
+        userService.delete(result.getId());
     }
 
     @Test
     void shouldGetUserById() {
         UserDto user = userService.create(UserDto.builder()
                 .name("Rustam")
-                .email("rustam@mail.ru")
+                .email("rustam_test@mail.ru")
                 .build());
 
         UserDto result = userService.getById(user.getId());
         assertEquals(user.getId(), result.getId());
+        userService.delete(result.getId());
     }
 
     @Test
     void shouldThrowWhenUserNotFound() {
-        assertThrows(NoSuchElementException.class, () -> userService.getById(999L));
+        assertThrows(NoSuchElementException.class, () -> userService.getById(99999999L));
     }
 
     @Test
     void shouldDeleteUser() {
         UserDto user = userService.create(UserDto.builder()
                 .name("Rustam")
-                .email("rustam@mail.ru")
+                .email("rustam_test@mail.ru")
                 .build());
 
         userService.delete(user.getId());
-
         assertThrows(NoSuchElementException.class, () -> userService.getById(user.getId()));
     }
 }

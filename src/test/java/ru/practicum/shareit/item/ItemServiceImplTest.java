@@ -1,24 +1,33 @@
 package ru.practicum.shareit.item;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.web.server.ResponseStatusException;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.model.User;
 import java.util.Collection;
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
 class ItemServiceImplTest {
 
-    private final ItemRepository itemRepository = new ItemRepository();
-    private final UserRepository userRepository = new UserRepository();
-    private final ItemService itemService = new ItemServiceImpl(itemRepository, userRepository);
+    @Autowired
+    private ItemService itemService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ItemRepository itemRepository;
 
     @Test
     void shouldCreateItem() {
         User owner = userRepository.save(User.builder()
                 .name("Owner")
-                .email("owner@mail.ru")
+                .email("owner_test@mail.ru")
                 .build());
 
         ItemDto dto = ItemDto.builder()
@@ -33,6 +42,9 @@ class ItemServiceImplTest {
         assertEquals("Дрель", result.getName());
         assertEquals("Мощная дрель", result.getDescription());
         assertTrue(result.getAvailable());
+
+        itemRepository.deleteById(result.getId());
+        userRepository.deleteById(owner.getId());
     }
 
     @Test
@@ -43,14 +55,14 @@ class ItemServiceImplTest {
                 .available(true)
                 .build();
 
-        assertThrows(ResponseStatusException.class, () -> itemService.create(999L, dto));
+        assertThrows(ResponseStatusException.class, () -> itemService.create(9999999999L, dto));
     }
 
     @Test
     void shouldUpdateItemByOwner() {
         User owner = userRepository.save(User.builder()
                 .name("Owner")
-                .email("owner@mail.ru")
+                .email("owner_test@mail.ru")
                 .build());
 
         ItemDto item = itemService.create(owner.getId(), ItemDto.builder()
@@ -64,24 +76,25 @@ class ItemServiceImplTest {
                 .description("New description")
                 .available(false)
                 .build();
-
         ItemDto result = itemService.update(owner.getId(), item.getId(), update);
-
         assertEquals("New", result.getName());
         assertEquals("New description", result.getDescription());
         assertFalse(result.getAvailable());
+
+        itemRepository.deleteById(result.getId());
+        userRepository.deleteById(owner.getId());
     }
 
     @Test
     void shouldThrowWhenUpdateByNotOwner() {
         User owner = userRepository.save(User.builder()
                 .name("Owner")
-                .email("owner@mail.ru")
+                .email("owner_test@mail.ru")
                 .build());
 
         User other = userRepository.save(User.builder()
                 .name("Other")
-                .email("other@mail.ru")
+                .email("other_test@mail.ru")
                 .build());
 
         ItemDto item = itemService.create(owner.getId(), ItemDto.builder()
@@ -92,24 +105,30 @@ class ItemServiceImplTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> itemService.update(other.getId(), item.getId(), ItemDto.builder().name("New").build()));
+
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+        userRepository.deleteById(other.getId());
     }
 
     @Test
     void shouldThrowWhenUpdateByNotExistingItem() {
         User user = userRepository.save(User.builder()
                 .name("Other")
-                .email("other@mail.ru")
+                .email("other_test@mail.ru")
                 .build());
 
         assertThrows(ResponseStatusException.class,
-                () -> itemService.update(user.getId(), 999L, ItemDto.builder().name("New").build()));
+                () -> itemService.update(user.getId(), 99999999L, ItemDto.builder().name("New").build()));
+
+        userRepository.deleteById(user.getId());
     }
 
     @Test
     void shouldGetItemById() {
         User owner = userRepository.save(User.builder()
                 .name("Owner")
-                .email("owner@mail.ru")
+                .email("owner_test@mail.ru")
                 .build());
 
         ItemDto item = itemService.create(owner.getId(), ItemDto.builder()
@@ -118,57 +137,67 @@ class ItemServiceImplTest {
                 .available(true)
                 .build());
 
-        ItemDto result = itemService.getById(item.getId());
+        ItemDto result = itemService.getById(owner.getId(), item.getId());
         assertEquals(item.getId(), result.getId());
         assertEquals("Дрель", result.getName());
+
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
     }
 
     @Test
     void shouldReturnOwnerItems() {
+
         User owner = userRepository.save(User.builder()
                 .name("Owner")
-                .email("owner@mail.ru")
+                .email("owner_test@mail.ru")
                 .build());
 
-        itemService.create(owner.getId(), ItemDto.builder()
+        ItemDto item1 = itemService.create(owner.getId(), ItemDto.builder()
                 .name("Дрель")
                 .description("Описание")
                 .available(true)
                 .build());
 
-        itemService.create(owner.getId(), ItemDto.builder()
+        ItemDto item2 = itemService.create(owner.getId(), ItemDto.builder()
                 .name("Молоток")
                 .description("Описание")
                 .available(true)
                 .build());
 
         Collection<ItemDto> items = itemService.getOwnerItems(owner.getId());
-
         assertEquals(2, items.size());
+
+        itemRepository.deleteById(item1.getId());
+        itemRepository.deleteById(item2.getId());
+        userRepository.deleteById(owner.getId());
     }
 
     @Test
     void shouldSearchOnlyAvailableItems() {
         User owner = userRepository.save(User.builder()
                 .name("Owner")
-                .email("owner@mail.ru")
+                .email("owner_test224@mail.ru")
                 .build());
 
-        itemService.create(owner.getId(), ItemDto.builder()
-                .name("Дрель")
+        ItemDto item1 = itemService.create(owner.getId(), ItemDto.builder()
+                .name("Вещь для теста Дрель")
                 .description("Мощная")
                 .available(true)
                 .build());
 
-        itemService.create(owner.getId(), ItemDto.builder()
-                .name("Дрель сломанная")
+        ItemDto item2 = itemService.create(owner.getId(), ItemDto.builder()
+                .name("Тестовая вещь сломанная")
                 .description("Недоступна")
                 .available(false)
                 .build());
 
-        Collection<ItemDto> result = itemService.search(owner.getId(), "дрель");
-
+        Collection<ItemDto> result = itemService.search(owner.getId(), "тест");
         assertEquals(1, result.size());
+
+        itemRepository.deleteById(item1.getId());
+        itemRepository.deleteById(item2.getId());
+        userRepository.deleteById(owner.getId());
     }
 
     @Test
