@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import ru.practicum.shareit.booking.dto.BookingCreateDto;
 import ru.practicum.shareit.booking.dto.BookingDto;
@@ -57,6 +58,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     // владелец подтверждает или отклоняет бронирование
+    @Transactional
     @Override
     public BookingDto approve(Long userId, Long bookingId, Boolean approved) {
         log.info("Получен запрос на подтверждение бронирования {} от пользователя {} со статусом {}",
@@ -73,6 +75,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     // достаем информацию о бронировании
+    @Transactional(readOnly = true)
     @Override
     public BookingDto getById(Long userId, Long bookingId) {
         log.info("Получен запрос на получение информации о бронирования {} от пользователя {}",
@@ -91,6 +94,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     // получаем информацию о бронированиях пользователем
+    @Transactional(readOnly = true)
     @Override
     public Collection<BookingDto> getUserBookings(Long userId, BookingState state) {
         log.info("Получен запрос на получение информации о бронированиях пользователя {} со статусом {}",
@@ -115,6 +119,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     // получаем информацию о бронированиях (владелец)
+    @Transactional(readOnly = true)
     @Override
     public Collection<BookingDto> getOwnerBookings(Long userId, BookingState state) {
         log.info("Получен запрос на получение информации о бронированиях у пользователя {} со статусом {}",

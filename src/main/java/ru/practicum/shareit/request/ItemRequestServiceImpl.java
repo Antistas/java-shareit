@@ -42,11 +42,15 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     @Override
     public Collection<ItemRequestDto> getAllRequests(Long userId, Integer from, Integer size) {
         log.info("Получен запрос на получение всех запросов пользователя {} с {} в количестве {}", userId, from, size);
-        getUser(userId);
+        if (size == null || size <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Параметр size должен быть больше 0");
+        }
         int page = from / size;
-        return itemRequestRepository.findAll(PageRequest.of(page, size))
+        getUser(userId);
+
+        return itemRequestRepository
+                .findByRequestor_IdNotOrderByCreatedDesc(userId, PageRequest.of(page, size))
                 .stream()
-                .filter(request -> !request.getRequestor().getId().equals(userId))
                 .map(ItemRequestMapper::toDto)
                 .toList();
     }

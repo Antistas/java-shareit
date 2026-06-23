@@ -15,7 +15,6 @@ class UserServiceImplTest {
 
     @Test
     void shouldCreateUser() {
-
         UserDto dto = UserDto.builder()
                 .name("Rustam")
                 .email("rustam_test@mail.ru")
