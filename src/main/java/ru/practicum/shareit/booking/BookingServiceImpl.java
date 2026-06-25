@@ -140,7 +140,7 @@ public class BookingServiceImpl implements BookingService {
     private User getUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Пользователь с id = " + userId +" не найден"));
+                        "Пользователь с id = " + userId + " не найден"));
     }
 
     private Item getItem(Long itemId) {
