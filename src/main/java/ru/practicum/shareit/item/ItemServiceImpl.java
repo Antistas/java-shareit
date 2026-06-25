@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import ru.practicum.shareit.booking.BookingRepository;
+import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
@@ -16,6 +17,8 @@ import ru.practicum.shareit.user.model.User;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -89,17 +92,74 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public Collection<ItemDto> getOwnerItems(Long userId) {
         log.info("Получен запрос на отображение вещей пользователя c id = {}", userId);
+        // запрос 1
         getUserById(userId);
-        return itemRepository.findByOwner_Id(userId)
-                .stream()
-                .map(this::enrichItemDto)
+        // запрос 2
+        List<Item> items = itemRepository.findByOwner_Id(userId);
+
+        List<Long> itemIds = items.stream()
+                .map(Item::getId)
+                .toList();
+
+        // собрал мапу броней (прошлых) - запрос 3
+        Map<Long, LocalDateTime> lastBookings = getLastBookings(itemIds);
+        // запрос 4 - будущие брони (мб лишний)
+        Map<Long, LocalDateTime> nextBookings = getNextBookings(itemIds);
+        // собрал мапу комментов - запрос 5
+        Map<Long, List<CommentDto>> comments = getCommentsByItems(itemIds);
+
+        return items.stream()
+                .map(item -> enrichItemDto(item, lastBookings, nextBookings, comments))
                 .toList();
     }
 
-    private ItemDto enrichItemDto(Item item) {
+    private ItemDto enrichItemDto(Item item,
+                                  Map<Long, LocalDateTime> lastBookings,
+                                  Map<Long, LocalDateTime> nextBookings,
+                                  Map<Long, List<CommentDto>> comments) {
         ItemDto itemDto = ItemMapper.toItemDto(item);
-        itemDto.setComments(getComments(item.getId()));
+        // обогощаю бронированиями
+        itemDto.setLastBooking(lastBookings.get(item.getId()));
+        itemDto.setNextBooking(nextBookings.get(item.getId()));
+        itemDto.setComments(comments.getOrDefault(item.getId(), List.of()));
         return itemDto;
+    }
+
+    private Map<Long, LocalDateTime> getLastBookings(List<Long> itemIds) {
+        return bookingRepository.findByItem_IdInAndStatusAndEndBeforeOrderByEndDesc(
+                        itemIds,
+                        BookingStatus.APPROVED,
+                        LocalDateTime.now()
+                )
+                .stream()
+                .collect(Collectors.toMap(
+                        booking -> booking.getItem().getId(),
+                        Booking::getEnd,
+                        (first, second) -> first
+                ));
+    }
+
+    private Map<Long, LocalDateTime> getNextBookings(List<Long> itemIds) {
+        return bookingRepository.findByItem_IdInAndStatusAndStartAfterOrderByStartAsc(
+                        itemIds,
+                        BookingStatus.APPROVED,
+                        LocalDateTime.now()
+                )
+                .stream()
+                .collect(Collectors.toMap(
+                        booking -> booking.getItem().getId(),
+                        Booking::getStart,
+                        (first, second) -> first
+                ));
+    }
+
+    private Map<Long, List<CommentDto>> getCommentsByItems(List<Long> itemIds) {
+        return commentRepository.findByItem_IdIn(itemIds)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        comment -> comment.getItem().getId(),
+                        Collectors.mapping(ItemMapper::toCommentDto, Collectors.toList())
+                ));
     }
 
     @Override

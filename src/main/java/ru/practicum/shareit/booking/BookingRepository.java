@@ -32,4 +32,18 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             BookingStatus status,
             LocalDateTime now
     );
+
+    // поиск по бронированиям, принимает на вход список вещей, статус, дату, сортируем по дате убыв.
+    List<Booking> findByItem_IdInAndStatusAndEndBeforeOrderByEndDesc(
+            List<Long> itemIds,
+            BookingStatus status,
+            LocalDateTime now
+    );
+
+    // аналогично по возр.
+    List<Booking> findByItem_IdInAndStatusAndStartAfterOrderByStartAsc(
+            List<Long> itemIds,
+            BookingStatus status,
+            LocalDateTime now
+    );
 }

@@ -8,4 +8,6 @@ import java.util.List;
 public interface CommentRepository extends JpaRepository<Comment, Long> {
     // найти комментарии к вещи
     List<Comment> findByItem_Id(Long itemId);
+
+    List<Comment> findByItem_IdIn(List<Long> itemIds);
 }
