@@ -92,8 +92,14 @@ public class ItemServiceImpl implements ItemService {
         getUserById(userId);
         return itemRepository.findByOwner_Id(userId)
                 .stream()
-                .map(ItemMapper::toItemDto)
+                .map(this::enrichItemDto)
                 .toList();
+    }
+
+    private ItemDto enrichItemDto(Item item) {
+        ItemDto itemDto = ItemMapper.toItemDto(item);
+        itemDto.setComments(getComments(item.getId()));
+        return itemDto;
     }
 
     @Override
@@ -130,33 +136,16 @@ public class ItemServiceImpl implements ItemService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Пользователь не арендовал эту вещь");
         }
 
-        Comment comment = Comment.builder()
-                .text(commentDto.getText())
-                .item(item)
-                .author(author)
-                .created(LocalDateTime.now())
-                .build();
-
+        Comment comment = ItemMapper.toComment(commentDto, item, author);
         Comment saved = commentRepository.save(comment);
-
-        return CommentDto.builder()
-                .id(saved.getId())
-                .text(saved.getText())
-                .authorName(saved.getAuthor().getName())
-                .created(saved.getCreated())
-                .build();
+        return ItemMapper.toCommentDto(saved);
     }
 
     private List<CommentDto> getComments(Long itemId) {
         log.info("Получен запрос на вывод комментариев к вещи {}", itemId);
         return commentRepository.findByItem_Id(itemId)
                 .stream()
-                .map(comment -> CommentDto.builder()
-                        .id(comment.getId())
-                        .text(comment.getText())
-                        .authorName(comment.getAuthor().getName())
-                        .created(comment.getCreated())
-                        .build())
+                .map(ItemMapper::toCommentDto)
                 .toList();
     }
 }

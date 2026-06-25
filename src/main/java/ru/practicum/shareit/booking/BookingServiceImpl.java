@@ -45,14 +45,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         validateDates(dto.getStart(), dto.getEnd());
-
-        Booking booking = Booking.builder()
-                .start(dto.getStart())
-                .end(dto.getEnd())
-                .item(item)
-                .booker(user)
-                .status(BookingStatus.WAITING)
-                .build();
+        Booking booking = BookingMapper.toBooking(dto, item, user);
 
         return BookingMapper.toBookingDto(bookingRepository.save(booking));
     }
@@ -69,6 +62,10 @@ public class BookingServiceImpl implements BookingService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Подтвердить может только владелец");
         }
         getUser(userId);
+
+        if (booking.getStatus() != BookingStatus.WAITING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Статус бронирования уже изменен");
+        }
 
         booking.setStatus(Boolean.TRUE.equals(approved) ? BookingStatus.APPROVED : BookingStatus.REJECTED);
         return BookingMapper.toBookingDto(bookingRepository.save(booking));
@@ -142,17 +139,20 @@ public class BookingServiceImpl implements BookingService {
     // хелперы
     private User getUser(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Пользователь не найден"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Пользователь с id = " + userId +" не найден"));
     }
 
     private Item getItem(Long itemId) {
         return itemRepository.findById(itemId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Вещь не найдена"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Вещь c id = " + itemId + " не найдена"));
     }
 
     private Booking getBooking(Long bookingId) {
         return bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Бронирование не найдено"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Бронирование c id = " + bookingId + " не найдено"));
     }
 
     private void validateDates(LocalDateTime start, LocalDateTime end) {
