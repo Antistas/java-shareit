@@ -75,7 +75,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void delete(Long userId) {
         log.info("Получен запрос на удаление пользователя с id = {}", userId);
-        userRepository.delete(userId);
+        userRepository.deleteById(userId);
     }
 
     private void validateEmail(String email) {

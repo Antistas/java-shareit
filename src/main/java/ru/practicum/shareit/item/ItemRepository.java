@@ -1,46 +1,24 @@
 package ru.practicum.shareit.item;
 
-import org.springframework.stereotype.Repository;
+import org.springframework.data.repository.query.Param;
 import ru.practicum.shareit.item.model.Item;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
-@Repository
-public class ItemRepository {
 
-    private final Map<Long, Item> items = new HashMap<>();
+import java.util.List;
 
-    private final AtomicLong generator = new AtomicLong(1);
+public interface ItemRepository extends JpaRepository<Item, Long> {
 
-    public Item save(Item item) {
-        if (item.getId() == null) {
-            item.setId(generator.getAndIncrement());
-        }
+    List<Item> findByOwner_Id(Long ownerId);
 
-        items.put(item.getId(), item);
-        return item;
-    }
-
-    public Optional<Item> findById(Long id) {
-        return Optional.ofNullable(items.get(id));
-    }
-
-    public Collection<Item> findAll() {
-        return items.values();
-    }
-
-    public void delete(Long id) {
-        items.remove(id);
-    }
-
-    public Collection<Item> search(String text) {
-        String query = text.toLowerCase();
-        return items.values()
-                .stream()
-                .filter(item -> Boolean.TRUE.equals(item.getAvailable()))
-                .filter(item ->
-                        item.getName().toLowerCase().contains(query)
-                                || item.getDescription().toLowerCase().contains(query))
-                .toList();
-    }
+    @Query("""
+            select i from Item i
+            where i.available = true
+            and (
+                upper(i.name) like upper(concat('%', :text, '%'))
+                or upper(i.description) like upper(concat('%', :text, '%'))
+            )
+            """)
+    List<Item> search(@Param("text") String text);
 }

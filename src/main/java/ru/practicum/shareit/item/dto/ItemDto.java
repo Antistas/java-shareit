@@ -7,6 +7,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -23,4 +26,11 @@ public class ItemDto {
 
     @NotNull
     private Boolean available;
+
+    // последнее бронирование
+    private LocalDateTime lastBooking;
+    // следующее бронирование
+    private LocalDateTime nextBooking;
+
+    private List<CommentDto> comments;
 }
