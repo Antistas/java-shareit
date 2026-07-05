@@ -33,4 +33,6 @@ public class ItemDto {
     private LocalDateTime nextBooking;
 
     private List<CommentDto> comments;
+
+    private Long requestId;
 }

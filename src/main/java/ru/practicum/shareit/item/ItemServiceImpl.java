@@ -12,6 +12,7 @@ import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.model.User;
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import ru.practicum.shareit.request.ItemRequestRepository;
 
 @Service
 @Slf4j
@@ -29,6 +31,7 @@ public class ItemServiceImpl implements ItemService {
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final CommentRepository commentRepository;
+    private final ItemRequestRepository itemRequestRepository;
 
     private User getUserById(Long userId) {
         return userRepository.findById(userId)
@@ -42,11 +45,22 @@ public class ItemServiceImpl implements ItemService {
                         "Вещь с id=" + itemId + " не найдена"));
     }
 
+    private ItemRequest getItemRequestById(Long itemRequestId) {
+        return itemRequestRepository.findById(itemRequestId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Запрос с id=" + itemRequestId + " не найден"
+                ));
+    }
+
     @Override
     public ItemDto create(Long userId, ItemDto itemDto) {
         log.info("Получен запрос на создание вещи {} от пользователя {}", itemDto, userId);
         User owner = getUserById(userId);
-        Item item = ItemMapper.toItem(itemDto, owner);
+
+        ItemRequest request = itemDto.getRequestId() != null ? getItemRequestById(itemDto.getRequestId()) : null;
+
+        Item item = ItemMapper.toItem(itemDto, owner, request);
         Item savedItem = itemRepository.save(item);
         return ItemMapper.toItemDto(savedItem);
     }
