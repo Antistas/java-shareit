@@ -9,6 +9,7 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import ru.practicum.shareit.client.BaseClient;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
 import ru.practicum.shareit.user.dto.UserDto;
@@ -38,19 +39,20 @@ public class ItemClient extends BaseClient {
         return patch("/" + itemId, userId, itemDto);
     }
 
-    public ResponseEntity<Object> getOwnRequests(Long userId) {
+    public ResponseEntity<Object> getById(Long userId, Long itemId) {
+        return get("/" + itemId, userId);
+    }
+
+    public ResponseEntity<Object> getOwnerItems(Long userId) {
         return get("", userId);
     }
 
-    public ResponseEntity<Object> getAllRequests(Long userId, Integer from, Integer size) {
-        Map<String, Object> parameters = Map.of(
-                "from", from,
-                "size", size
-        );
-        return get("/all?from={from}&size={size}", userId, parameters);
+    public ResponseEntity<Object> search(Long userId, String text) {
+        Map<String, Object> parameters = Map.of("text", text);
+        return get("/search?text={text}", userId, parameters);
     }
 
-    public ResponseEntity<Object> getById(Long userId, Long requestId) {
-        return get("/" + requestId, userId);
+    public ResponseEntity<Object> addComment(Long userId, Long itemId, CommentDto commentDto) {
+        return post("/" + itemId + "/comment", userId, commentDto);
     }
 }

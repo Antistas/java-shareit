@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import ru.practicum.shareit.item.ItemRepository;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
 import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.UserRepository;
@@ -19,6 +20,7 @@ public class ItemRequestServiceImpl implements ItemRequestService {
 
     private final ItemRequestRepository itemRequestRepository;
     private final UserRepository userRepository;
+    private final ItemRepository itemRepository;
 
     @Override
     public ItemRequestDto create(Long userId, ItemRequestDto dto) {
@@ -57,12 +59,17 @@ public class ItemRequestServiceImpl implements ItemRequestService {
 
     @Override
     public ItemRequestDto getById(Long userId, Long requestId) {
-        log.info("Получен запрос на получение запроса пользователя {} с id = {}", userId, requestId);
+        log.info("Получен запрос от gateway (getById) на получение запроса пользователя {} с id = {}", userId, requestId);
         getUser(userId);
         ItemRequest request = itemRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Запрос не найден"));
 
-        return ItemRequestMapper.toDto(request);
+        var items = itemRepository.findByRequest_Id(requestId)
+                .stream()
+                .map(ItemRequestMapper::toRequestItemDto)
+                .toList();
+
+        return ItemRequestMapper.toDto(request, items);
     }
 
     private User getUser(Long userId) {

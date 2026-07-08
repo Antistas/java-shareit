@@ -28,7 +28,7 @@ public class ItemRequestClient extends BaseClient {
     }
 
     public ResponseEntity<Object> create(Long userId, ItemRequestDto itemRequestDto) {
-        return post("/" + userId, itemRequestDto);
+        return post("", userId, itemRequestDto);
     }
 
     public ResponseEntity<Object> getOwnRequests(Long userId) {
@@ -44,6 +44,7 @@ public class ItemRequestClient extends BaseClient {
     }
 
     public ResponseEntity<Object> getById(Long userId, Long requestId) {
+        log.info("Запрашиваем на сервере информацию о реквесте");
         return get("/" + requestId, userId);
     }
 }

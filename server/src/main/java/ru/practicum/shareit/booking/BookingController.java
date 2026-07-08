@@ -31,7 +31,7 @@ public class BookingController {
     public BookingDto approve(@RequestHeader("X-Sharer-User-Id") Long userId,
                               @PathVariable Long bookingId,
                               @RequestParam Boolean approved) {
-        log.info("Получен запрос на бронирование id = {} от пользователя id = {} статус {}", bookingId, userId, approved);
+        log.info("Получен запрос от gateway на бронирование id = {} от пользователя id = {} статус {}", bookingId, userId, approved);
         return bookingService.approve(userId, bookingId, approved);
     }
 

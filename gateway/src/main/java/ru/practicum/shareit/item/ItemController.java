@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
-import java.util.Collection;
 
 @RestController
 @RequestMapping("/items")
@@ -48,7 +47,7 @@ public class ItemController {
     @GetMapping("/search")
     public ResponseEntity<Object> search(@RequestHeader("X-Sharer-User-Id") Long userId,
                                       @RequestParam String text) {
-        log.info("Получен запрос на поиск вещей от пользователя c id = {} с тестом = {}", userId, text);
+        log.info("Получен запрос на поиск вещей от пользователя c id = {} с текстом = {}", userId, text);
         return itemClient.search(userId, text);
     }
 

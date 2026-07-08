@@ -19,7 +19,7 @@ public class ItemRequestController {
     @PostMapping
     public ResponseEntity<Object> create(@RequestHeader("X-Sharer-User-Id") Long userId,
                                          @RequestBody ItemRequestDto itemRequestDto) {
-        log.info("Получен запрос на создание запроса вещи {} от пользователя {}", itemRequestDto, userId);
+        log.info("Получен запрос на gateway на создание запроса вещи {} от пользователя {}", itemRequestDto, userId);
         return itemRequestClient.create(userId, itemRequestDto);
     }
 
