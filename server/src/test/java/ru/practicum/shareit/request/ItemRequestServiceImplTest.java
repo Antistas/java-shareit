@@ -149,4 +149,124 @@ public class ItemRequestServiceImplTest {
         assertThrows(ResponseStatusException.class, () -> itemRequestService.getAllRequests(999L, 2, -1));
     }
 
+    @Test
+    void shouldReturnRequestById() {
+        User user = userRepository.save(User.builder()
+                .name("Request owner")
+                .email("request_by_id@mail.ru")
+                .build());
+
+        ItemRequestDto createdRequest = itemRequestService.create(user.getId(),
+                ItemRequestDto.builder()
+                        .description("Нужна стремянка")
+                        .build());
+
+        ItemRequestDto result = itemRequestService.getById(user.getId(), createdRequest.getId());
+
+        assertEquals(createdRequest.getId(), result.getId());
+        assertEquals("Нужна стремянка", result.getDescription());
+        assertNotNull(result.getCreated());
+
+        itemRequestRepository.deleteById(createdRequest.getId());
+        userRepository.deleteById(user.getId());
+    }
+
+    @Test
+    void shouldThrowWhenGetRequestByUnknownId() {
+        User user = userRepository.save(User.builder()
+                .name("User")
+                .email("unknown_request@mail.ru")
+                .build());
+
+        assertThrows(ResponseStatusException.class,
+                () -> itemRequestService.getById(user.getId(), 999999999L));
+
+        userRepository.deleteById(user.getId());
+    }
+
+    @Test
+    void shouldThrowWhenGetRequestByUnknownUser() {
+        User author = userRepository.save(User.builder()
+                .name("Author")
+                .email("author@mail.ru")
+                .build());
+
+        ItemRequestDto request = itemRequestService.create(author.getId(),
+                ItemRequestDto.builder()
+                        .description("Нужна дрель")
+                        .build());
+
+        assertThrows(ResponseStatusException.class,
+                () -> itemRequestService.getById(999999999L, request.getId()));
+
+        itemRequestRepository.deleteById(request.getId());
+        userRepository.deleteById(author.getId());
+    }
+
+    @Test
+    void shouldReturnEmptyAllRequestsWhenOnlyOwnRequestsExist() {
+        User user = userRepository.save(User.builder()
+                .name("Owner")
+                .email("owner_only@mail.ru")
+                .build());
+
+        ItemRequestDto request = itemRequestService.create(user.getId(),
+                ItemRequestDto.builder()
+                        .description("Нужен молоток")
+                        .build());
+
+        List<ItemRequestDto> result = itemRequestService
+                .getAllRequests(user.getId(), 0, 10)
+                .stream()
+                .toList();
+
+        assertTrue(result.isEmpty());
+
+        itemRequestRepository.deleteById(request.getId());
+        userRepository.deleteById(user.getId());
+    }
+
+    @Test
+    void shouldThrowWhenGetAllRequestsUnknownUser() {
+        assertThrows(ResponseStatusException.class,
+                () -> itemRequestService.getAllRequests(999999999L, 0, 10));
+    }
+
+    @Test
+    void shouldReturnFirstPageOfRequests() {
+        User currentUser = userRepository.save(User.builder()
+                .name("Current")
+                .email("current@mail.ru")
+                .build());
+
+        User author = userRepository.save(User.builder()
+                .name("Author")
+                .email("author_page@mail.ru")
+                .build());
+
+        ItemRequestDto first = itemRequestService.create(author.getId(),
+                ItemRequestDto.builder().description("1").build());
+
+        ItemRequestDto second = itemRequestService.create(author.getId(),
+                ItemRequestDto.builder().description("2").build());
+
+        ItemRequestDto third = itemRequestService.create(author.getId(),
+                ItemRequestDto.builder().description("3").build());
+
+        List<ItemRequestDto> result = itemRequestService
+                .getAllRequests(currentUser.getId(), 0, 2)
+                .stream()
+                .toList();
+
+        assertEquals(2, result.size());
+        assertEquals(third.getId(), result.get(0).getId());
+        assertEquals(second.getId(), result.get(1).getId());
+
+        itemRequestRepository.deleteById(first.getId());
+        itemRequestRepository.deleteById(second.getId());
+        itemRequestRepository.deleteById(third.getId());
+        userRepository.deleteById(currentUser.getId());
+        userRepository.deleteById(author.getId());
+    }
+
 }

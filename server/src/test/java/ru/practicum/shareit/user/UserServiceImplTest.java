@@ -111,4 +111,96 @@ class UserServiceImplTest {
         userService.delete(user.getId());
         assertThrows(NoSuchElementException.class, () -> userService.getById(user.getId()));
     }
+
+    @Test
+    void shouldUpdateOnlyName() {
+        UserDto user = userService.create(UserDto.builder()
+                .name("Old")
+                .email("only_name_test@mail.ru")
+                .build());
+
+        UserDto update = UserDto.builder()
+                .name("New")
+                .build();
+
+        UserDto result = userService.update(user.getId(), update);
+
+        assertEquals(user.getId(), result.getId());
+        assertEquals("New", result.getName());
+        assertEquals("only_name_test@mail.ru", result.getEmail());
+
+        userService.delete(result.getId());
+    }
+
+    @Test
+    void shouldUpdateOnlyEmail() {
+        UserDto user = userService.create(UserDto.builder()
+                .name("Rustam")
+                .email("only_email_old@mail.ru")
+                .build());
+
+        UserDto update = UserDto.builder()
+                .email("only_email_new@mail.ru")
+                .build();
+
+        UserDto result = userService.update(user.getId(), update);
+
+        assertEquals(user.getId(), result.getId());
+        assertEquals("Rustam", result.getName());
+        assertEquals("only_email_new@mail.ru", result.getEmail());
+
+        userService.delete(result.getId());
+    }
+
+    @Test
+    void shouldThrowWhenUpdateUnknownUser() {
+        UserDto update = UserDto.builder()
+                .name("Unknown")
+                .email("unknown_update@mail.ru")
+                .build();
+
+        assertThrows(NoSuchElementException.class,
+                () -> userService.update(99999999L, update));
+    }
+
+    @Test
+    void shouldThrowWhenUpdateEmailAlreadyExists() {
+        UserDto user1 = userService.create(UserDto.builder()
+                .name("User 1")
+                .email("busy_email_1@mail.ru")
+                .build());
+
+        UserDto user2 = userService.create(UserDto.builder()
+                .name("User 2")
+                .email("busy_email_2@mail.ru")
+                .build());
+
+        UserDto update = UserDto.builder()
+                .email("busy_email_1@mail.ru")
+                .build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> userService.update(user2.getId(), update));
+
+        userService.delete(user1.getId());
+        userService.delete(user2.getId());
+    }
+
+    @Test
+    void shouldNotChangeUserWhenUpdateEmptyDto() {
+        UserDto user = userService.create(UserDto.builder()
+                .name("Rustam")
+                .email("empty_update@mail.ru")
+                .build());
+
+        UserDto update = UserDto.builder().build();
+
+        UserDto result = userService.update(user.getId(), update);
+
+        assertEquals(user.getId(), result.getId());
+        assertEquals("Rustam", result.getName());
+        assertEquals("empty_update@mail.ru", result.getEmail());
+
+        userService.delete(result.getId());
+    }
 }

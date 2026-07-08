@@ -206,4 +206,129 @@ class ItemServiceImplTest {
         Collection<ItemDto> result = itemService.search(1L, "");
         assertTrue(result.isEmpty());
     }
+
+
+    @Test
+    void shouldThrowWhenGetItemByUnknownId() {
+        User owner = userRepository.save(User.builder()
+                .name("Owner")
+                .email("owner_unknown@mail.ru")
+                .build());
+
+        assertThrows(ResponseStatusException.class,
+                () -> itemService.getById(owner.getId(), 99999999L));
+
+        userRepository.deleteById(owner.getId());
+    }
+
+    @Test
+    void shouldReturnEmptyOwnerItems() {
+        User owner = userRepository.save(User.builder()
+                .name("EmptyOwner")
+                .email("empty_owner@mail.ru")
+                .build());
+
+        Collection<ItemDto> items = itemService.getOwnerItems(owner.getId());
+
+        assertTrue(items.isEmpty());
+
+        userRepository.deleteById(owner.getId());
+    }
+
+    @Test
+    void shouldSearchByDescription() {
+        User owner = userRepository.save(User.builder()
+                .name("Owner")
+                .email("description_owner@mail.ru")
+                .build());
+
+        ItemDto item = itemService.create(owner.getId(), ItemDto.builder()
+                .name("Перфоратор")
+                .description("Очень мощная тестовая вещь")
+                .available(true)
+                .build());
+
+        Collection<ItemDto> result = itemService.search(owner.getId(), "мощная");
+
+        assertEquals(1, result.size());
+        assertEquals(item.getId(), result.iterator().next().getId());
+
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+    }
+
+    @Test
+    void shouldReturnEmptyWhenNothingFound() {
+        User owner = userRepository.save(User.builder()
+                .name("Owner")
+                .email("notfound_owner@mail.ru")
+                .build());
+
+        ItemDto item = itemService.create(owner.getId(), ItemDto.builder()
+                .name("Дрель")
+                .description("Описание")
+                .available(true)
+                .build());
+
+        Collection<ItemDto> result = itemService.search(owner.getId(), "несуществующий");
+
+        assertTrue(result.isEmpty());
+
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+    }
+
+    @Test
+    void shouldUpdateOnlyName() {
+        User owner = userRepository.save(User.builder()
+                .name("Owner")
+                .email("partial_owner@mail.ru")
+                .build());
+
+        ItemDto item = itemService.create(owner.getId(), ItemDto.builder()
+                .name("Old")
+                .description("Description")
+                .available(true)
+                .build());
+
+        ItemDto patch = ItemDto.builder()
+                .name("New")
+                .build();
+
+        ItemDto result = itemService.update(owner.getId(), item.getId(), patch);
+
+        assertEquals("New", result.getName());
+        assertEquals("Description", result.getDescription());
+        assertTrue(result.getAvailable());
+
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+    }
+
+    @Test
+    void shouldUpdateOnlyAvailability() {
+        User owner = userRepository.save(User.builder()
+                .name("Owner")
+                .email("availability_owner@mail.ru")
+                .build());
+
+        ItemDto item = itemService.create(owner.getId(), ItemDto.builder()
+                .name("Item")
+                .description("Description")
+                .available(true)
+                .build());
+
+        ItemDto patch = ItemDto.builder()
+                .available(false)
+                .build();
+
+        ItemDto result = itemService.update(owner.getId(), item.getId(), patch);
+
+        assertFalse(result.getAvailable());
+        assertEquals("Item", result.getName());
+        assertEquals("Description", result.getDescription());
+
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+    }
 }

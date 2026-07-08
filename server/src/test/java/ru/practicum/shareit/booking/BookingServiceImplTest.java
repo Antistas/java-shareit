@@ -436,5 +436,257 @@ public class BookingServiceImplTest {
         return dto;
     }
 
+    @Test
+    void shouldThrowWhenBookerIsOwner() {
+        User owner = userRepository.save(User.builder()
+                .name("OwnerSelfBooking")
+                .email("owner-self-booking@google.ru")
+                .build());
+
+        ItemDto dto = ItemDto.builder()
+                .name("Дрель")
+                .description("Мощная дрель")
+                .available(true)
+                .build();
+        ItemDto item = itemService.create(owner.getId(), dto);
+        BookingCreateDto bookingDto = createBookingDto(item.getId(), 1, 2);
+
+        assertThrows(ResponseStatusException.class,
+                () -> bookingService.create(owner.getId(), bookingDto));
+
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+    }
+
+    @Test
+    void shouldThrowWhenItemIsNotAvailable() {
+        User owner = userRepository.save(User.builder()
+                .name("OwnerUnavailable")
+                .email("owner-unavailable@google.ru")
+                .build());
+
+        User booker = userRepository.save(User.builder()
+                .name("BookerUnavailable")
+                .email("booker-unavailable@google.ru")
+                .build());
+
+        ItemDto dto = ItemDto.builder()
+                .name("Дрель")
+                .description("Мощная дрель")
+                .available(false)
+                .build();
+        ItemDto item = itemService.create(owner.getId(), dto);
+        BookingCreateDto bookingDto = createBookingDto(item.getId(), 1, 2);
+
+        assertThrows(ResponseStatusException.class,
+                () -> bookingService.create(booker.getId(), bookingDto));
+
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+        userRepository.deleteById(booker.getId());
+    }
+
+    @Test
+    void shouldThrowWhenApproveAlreadyApprovedBooking() {
+        User owner = userRepository.save(User.builder()
+                .name("OwnerAlreadyApproved")
+                .email("owner-already-approved@google.ru")
+                .build());
+
+        User booker = userRepository.save(User.builder()
+                .name("BookerAlreadyApproved")
+                .email("booker-already-approved@google.ru")
+                .build());
+
+        ItemDto dto = ItemDto.builder()
+                .name("Дрель")
+                .description("Мощная дрель")
+                .available(true)
+                .build();
+        ItemDto item = itemService.create(owner.getId(), dto);
+        BookingCreateDto bookingDto = createBookingDto(item.getId(), 1, 2);
+        BookingDto result = bookingService.create(booker.getId(), bookingDto);
+
+        bookingService.approve(owner.getId(), result.getId(), true);
+
+        assertThrows(ResponseStatusException.class,
+                () -> bookingService.approve(owner.getId(), result.getId(), true));
+
+        bookingRepository.deleteById(result.getId());
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+        userRepository.deleteById(booker.getId());
+    }
+
+    @Test
+    void shouldThrowWhenGetOwnerBookingsByUnknownUser() {
+        assertThrows(ResponseStatusException.class,
+                () -> bookingService.getOwnerBookings(999999L, BookingState.ALL));
+    }
+
+    @Test
+    void shouldReturnOwnerAllBookings() {
+        User owner = userRepository.save(User.builder()
+                .name("OwnerAll")
+                .email("owner-all@google.ru")
+                .build());
+
+        User booker = userRepository.save(User.builder()
+                .name("BookerAll")
+                .email("booker-all@google.ru")
+                .build());
+
+        ItemDto dto = ItemDto.builder()
+                .name("Дрель")
+                .description("Мощная дрель")
+                .available(true)
+                .build();
+        ItemDto itemDto = itemService.create(owner.getId(), dto);
+        Item item = itemRepository.findById(itemDto.getId()).orElseThrow();
+
+        Booking pastBooking = bookingRepository.save(Booking.builder()
+                .booker(booker)
+                .item(item)
+                .start(LocalDateTime.now().minusDays(2))
+                .end(LocalDateTime.now().minusDays(1))
+                .status(BookingStatus.APPROVED)
+                .build());
+
+        Booking futureBooking = bookingRepository.save(Booking.builder()
+                .booker(booker)
+                .item(item)
+                .start(LocalDateTime.now().plusDays(1))
+                .end(LocalDateTime.now().plusDays(2))
+                .status(BookingStatus.WAITING)
+                .build());
+
+        Collection<BookingDto> result = bookingService.getOwnerBookings(owner.getId(), BookingState.ALL);
+
+        assertEquals(2, result.size());
+
+        bookingRepository.deleteById(pastBooking.getId());
+        bookingRepository.deleteById(futureBooking.getId());
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+        userRepository.deleteById(booker.getId());
+    }
+
+    @Test
+    void shouldReturnOwnerCurrentBookings() {
+        User owner = userRepository.save(User.builder()
+                .name("OwnerCurrent")
+                .email("owner-current@google.ru")
+                .build());
+
+        User booker = userRepository.save(User.builder()
+                .name("BookerCurrent")
+                .email("booker-current@google.ru")
+                .build());
+
+        ItemDto dto = ItemDto.builder()
+                .name("Дрель")
+                .description("Мощная дрель")
+                .available(true)
+                .build();
+        ItemDto itemDto = itemService.create(owner.getId(), dto);
+        Item item = itemRepository.findById(itemDto.getId()).orElseThrow();
+
+        Booking booking = bookingRepository.save(Booking.builder()
+                .booker(booker)
+                .item(item)
+                .start(LocalDateTime.now().minusHours(1))
+                .end(LocalDateTime.now().plusHours(1))
+                .status(BookingStatus.APPROVED)
+                .build());
+
+        Collection<BookingDto> result = bookingService.getOwnerBookings(owner.getId(), BookingState.CURRENT);
+
+        assertEquals(1, result.size());
+        assertEquals(booking.getId(), result.iterator().next().getId());
+
+        bookingRepository.deleteById(booking.getId());
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+        userRepository.deleteById(booker.getId());
+    }
+
+    @Test
+    void shouldReturnOwnerPastBookings() {
+        User owner = userRepository.save(User.builder()
+                .name("OwnerPast")
+                .email("owner-past@google.ru")
+                .build());
+
+        User booker = userRepository.save(User.builder()
+                .name("BookerPast")
+                .email("booker-past@google.ru")
+                .build());
+
+        ItemDto dto = ItemDto.builder()
+                .name("Дрель")
+                .description("Мощная дрель")
+                .available(true)
+                .build();
+        ItemDto itemDto = itemService.create(owner.getId(), dto);
+        Item item = itemRepository.findById(itemDto.getId()).orElseThrow();
+
+        Booking booking = bookingRepository.save(Booking.builder()
+                .booker(booker)
+                .item(item)
+                .start(LocalDateTime.now().minusDays(2))
+                .end(LocalDateTime.now().minusDays(1))
+                .status(BookingStatus.APPROVED)
+                .build());
+
+        Collection<BookingDto> result = bookingService.getOwnerBookings(owner.getId(), BookingState.PAST);
+
+        assertEquals(1, result.size());
+        assertEquals(booking.getId(), result.iterator().next().getId());
+
+        bookingRepository.deleteById(booking.getId());
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+        userRepository.deleteById(booker.getId());
+    }
+
+    @Test
+    void shouldReturnOwnerFutureBookings() {
+        User owner = userRepository.save(User.builder()
+                .name("OwnerFuture")
+                .email("owner-future@google.ru")
+                .build());
+
+        User booker = userRepository.save(User.builder()
+                .name("BookerFuture")
+                .email("booker-future@google.ru")
+                .build());
+
+        ItemDto dto = ItemDto.builder()
+                .name("Дрель")
+                .description("Мощная дрель")
+                .available(true)
+                .build();
+        ItemDto itemDto = itemService.create(owner.getId(), dto);
+        Item item = itemRepository.findById(itemDto.getId()).orElseThrow();
+
+        Booking booking = bookingRepository.save(Booking.builder()
+                .booker(booker)
+                .item(item)
+                .start(LocalDateTime.now().plusDays(1))
+                .end(LocalDateTime.now().plusDays(2))
+                .status(BookingStatus.APPROVED)
+                .build());
+
+        Collection<BookingDto> result = bookingService.getOwnerBookings(owner.getId(), BookingState.FUTURE);
+
+        assertEquals(1, result.size());
+        assertEquals(booking.getId(), result.iterator().next().getId());
+
+        bookingRepository.deleteById(booking.getId());
+        itemRepository.deleteById(item.getId());
+        userRepository.deleteById(owner.getId());
+        userRepository.deleteById(booker.getId());
+    }
+
 
 }
