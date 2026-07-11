@@ -8,10 +8,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import ru.practicum.shareit.item.ItemRepository;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
+import ru.practicum.shareit.request.dto.RequestItemDto;
 import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.model.User;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,9 +39,29 @@ public class ItemRequestServiceImpl implements ItemRequestService {
         log.info("Получен запрос на получение своих запросов пользователя {}", userId);
         getUser(userId);
 
-        return itemRequestRepository.findByRequestor_IdOrderByCreatedDesc(userId)
+        List<ItemRequest> requests = itemRequestRepository
+                .findByRequestor_IdOrderByCreatedDesc(userId);
+
+        List<Long> requestIds = requests.stream()
+                .map(ItemRequest::getId)
+                .toList();
+
+        Map<Long, List<RequestItemDto>> itemsByRequest = itemRepository
+                .findByRequest_IdIn(requestIds)
                 .stream()
-                .map(ItemRequestMapper::toDto)
+                .collect(Collectors.groupingBy(
+                        item -> item.getRequest().getId(),
+                        Collectors.mapping(
+                                ItemRequestMapper::toRequestItemDto,
+                                Collectors.toList()
+                        )
+                ));
+
+        return requests.stream()
+                .map(request -> ItemRequestMapper.toDto(
+                        request,
+                        itemsByRequest.getOrDefault(request.getId(), List.of())
+                ))
                 .toList();
     }
 
@@ -62,7 +86,8 @@ public class ItemRequestServiceImpl implements ItemRequestService {
         log.info("Получен запрос от gateway (getById) на получение запроса пользователя {} с id = {}", userId, requestId);
         getUser(userId);
         ItemRequest request = itemRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Запрос не найден"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Запрос c id = " + requestId + " не найден"));
 
         var items = itemRepository.findByRequest_Id(requestId)
                 .stream()
@@ -74,6 +99,7 @@ public class ItemRequestServiceImpl implements ItemRequestService {
 
     private User getUser(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Пользователь не найден"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Пользователь c id = " + userId + " не найден"));
     }
 }

@@ -44,7 +44,6 @@ public class BookingServiceImpl implements BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Вещь недоступна");
         }
 
-        validateDates(dto.getStart(), dto.getEnd());
         Booking booking = BookingMapper.toBooking(dto, item, user);
 
         return BookingMapper.toBookingDto(bookingRepository.save(booking));
@@ -153,11 +152,5 @@ public class BookingServiceImpl implements BookingService {
         return bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Бронирование c id = " + bookingId + " не найдено"));
-    }
-
-    private void validateDates(LocalDateTime start, LocalDateTime end) {
-        if (start == null || end == null || !end.isAfter(start) || start.isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Некорректные даты бронирования");
-        }
     }
 }

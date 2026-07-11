@@ -1,5 +1,6 @@
 package ru.practicum.shareit.request;
 
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,7 +19,7 @@ public class ItemRequestController {
 
     @PostMapping
     public ResponseEntity<Object> create(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                         @RequestBody ItemRequestDto itemRequestDto) {
+                                         @Valid @RequestBody ItemRequestDto itemRequestDto) {
         log.info("Получен запрос на gateway на создание запроса вещи {} от пользователя {}", itemRequestDto, userId);
         return itemRequestClient.create(userId, itemRequestDto);
     }

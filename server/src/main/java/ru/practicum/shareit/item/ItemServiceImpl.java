@@ -179,10 +179,6 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public Collection<ItemDto> search(Long userId, String text) {
         log.info("Получен запрос на поиск вещей пользователя c id = {} с текстом {}", userId, text);
-        if (text == null || text.isBlank()) {
-            log.warn("Строка поиска пуста = {}", text);
-            return List.of();
-        }
 
         return itemRepository.search(text)
                 .stream()
